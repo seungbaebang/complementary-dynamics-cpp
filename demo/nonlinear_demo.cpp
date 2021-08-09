@@ -13,12 +13,15 @@
 #include <igl/PI.h>
 #include <igl/volume.h>
 #include <igl/cat.h>
+// #include <igl/dirname.h>
 
 // #include <igl/matlab/matlabinterface.h>
 
 
 //internal
+#include <json.hpp>
 #include <read_data_from_json.h>
+
 #include <lumped_mass_matrix.h>
 #include <lbs_matrix.h>
 #include <create_mask_matrix.h>
@@ -35,7 +38,7 @@
 
 #include <iostream>
 
-std::string folder_path = "/Users/seungbae/Sources/GitHub/ExteriorRigSpace_cpp/anim_data";
+std::string folder_path = "/Users/seungbae/Sources/GitHub/complementary-dynamics-cpp/examples";
 
 //#include "include/read_data_from_json.h"
 const Eigen::Vector3d red(255./255.,0./255.,0./255.);
@@ -54,6 +57,14 @@ Eigen::MatrixXd& C, Eigen::VectorXi& PI, Eigen::MatrixXi& BE,
 Eigen::MatrixXd& W, std::vector<Eigen::MatrixXd>& T_list,
 double& dt, int& k, double& YM, double& pr, double& scale)
 {
+
+#if defined(WIN32) || defined(_WIN32)
+	#define PATH_SEPARATOR std::string("\\")
+	#else
+#define PATH_SEPARATOR std::string("/")
+#endif
+
+
   using json = nlohmann::json;
 
 	std::ifstream infile(filename);
@@ -64,6 +75,7 @@ double& dt, int& k, double& YM, double& pr, double& scale)
 
 
 	const std::string dir = igl::dirname(filename) + PATH_SEPARATOR;
+  std::cout<<"dir: "<<dir<<std::endl;
   std::string model_name;
 	if(j.count("model"))
 		model_name = j["model"];
@@ -74,7 +86,9 @@ double& dt, int& k, double& YM, double& pr, double& scale)
   	if(j.count("mesh_file"))
 	{
 		std::string mesh_filename = j["mesh_file"];
-		Eigen::MatrixXi TF;
+    std::cout<<"mesh_filename: "<<mesh_filename<<std::endl;
+    std::cout<<"dir+mesh_filename: "<<dir+mesh_filename<<std::endl;
+		// Eigen::MatrixXi TF;
 		igl::readMESH(dir+mesh_filename, V, T, F);
     std::cout<<"dir+mesh_filename: "<<dir+mesh_filename<<std::endl;
 	}
@@ -151,8 +165,6 @@ int main(int argc, char *argv[])
   std::string model = argc>1?std::string(argv[1]):"sphere";
   std::string json_path = folder_path+"/"+model+"/"+model+".json";
 
-  //std::string filename = "/Users/seungbae/Sources/GitHub/ExteriorRigSpace_cpp/anim_data/sphere/sphere.json";
-
   Eigen::MatrixXd SV,TC; Eigen::MatrixXi SF,FTC,FN;
   {
     std::string obj_path = folder_path+"/"+model+"/"+model+".obj";
@@ -161,7 +173,10 @@ int main(int argc, char *argv[])
     std::cout<<"N row: "<<N.rows()<<", col: "<<N.cols()<<std::endl;
   }
 
+  std::cout<<"json_path: "<<json_path<<std::endl;
   read_json_data(json_path,V,T,F,C,PI,BE,W,T_list,dt,k,YM,pr,scale);
+
+  std::cout<<"V row: "<<V.rows()<<std::endl;
 
   YM = argc>2?std::stod(argv[2]):YM;
   pr = argc>3?std::stod(argv[3]):pr;
@@ -169,18 +184,14 @@ int main(int argc, char *argv[])
   double lambda, mu;
   emu_to_lame(YM,pr,lambda,mu);
 
-
   Eigen::MatrixXd params(T.rows(),2);
   params.col(0) = 0.5*lambda*Eigen::VectorXd::Ones(T.rows());
   params.col(1) = mu*Eigen::VectorXd::Ones(T.rows());
-
-
 
   igl::boundary_facets(T, F);
   F = F.rowwise().reverse().eval();
 
 	igl::lbs_matrix(V,W,VM);
-
 
   Eigen::VectorXd vol;
 
@@ -196,9 +207,6 @@ int main(int argc, char *argv[])
 
   Eigen::SparseMatrix<double> A;
   lbs_matrix_column(V,W,A);
-
-
-
 
   Eigen::SparseMatrix<double> phi;
   create_poisson_mask_matrix(V,T,phi);

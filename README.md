@@ -1,39 +1,27 @@
-# libigl example project
+# Complementary Dynamics cpp
 
-A blank project example showing how to use libigl and cmake. Feel free and
-encouraged to copy or fork this project as a way of starting a new personal
-project using libigl.
+Public c++ code release for the SIGGRAPH Asia 2020 paper [Complementary Dynamics](https://www.dgp.toronto.edu/projects/complementary-dynamics/) by Jiayi Eris Zhang, Seungbae Bang, David I.W. Levin and Alec Jacobson.
 
-## See the tutorial first
+# Dependency
 
-Then build, run and understand the [libigl
-tutorial](http://libigl.github.io/libigl/tutorial/).
+[libigl](https://github.com/libigl)\
+[Bartels](https://github.com/dilevin/Bartels)\
 
-## Dependencies
+# Setup
 
-The only dependencies are stl, eigen, [libigl](http://libigl.github.io/libigl/) and
-the dependencies of the `igl::opengl::glfw::Viewer`.
+Before running the code, you need to setup the following.\
+Compile static library `libbartels` with Bartels:
 
-The cmake build system will attempt to find libigl according to environment variables (e.g., `LIBIGL`) and searching in common desitinations (e.g., `/usr/local/libigl/`). If you haven't installed libigl before, we recommend you to clone a copy of libigl right here:
-
-    cd libigl-example-project/
-    git clone https://github.com/libigl/libigl.git
-
-## Compile
-
-Compile this project using the standard cmake routine:
-
+    cd Bartles
     mkdir build
     cd build
-    cmake ..
-    make
+    cmake .. -Dbartels_USE_STATIC_LIBRARY=ON
+    make -j8
 
-This should find and build the dependencies and create a `example_bin` binary.
+Compile static library `libigl` with libigl:
 
-## Run
-
-From within the `build` directory just issue:
-
-    ./example
-
-A glfw app should launch displaying a 3D cube.
+    cd libigl
+    mkdir build
+    cd build
+    cmake .. -DLIBIGL_USE_STATIC_LIBRARY=ON
+    make -j8

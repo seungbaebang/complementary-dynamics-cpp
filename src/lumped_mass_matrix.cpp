@@ -1,6 +1,5 @@
-#include <Eigen/Core>
-#include <Eigen/Sparse>
-#include <igl/massmatrix.h>
+// #include <Eigen/Core>
+// #include <Eigen/Sparse>
 #include "lumped_mass_matrix.h"
 
 
