@@ -1,7 +1,10 @@
 //igl
 #include <igl/opengl/glfw/Viewer.h>
 #include <igl/readMESH.h>
+#include <igl/readOBJ.h>
 #include <igl/writeOBJ.h>
+#include <igl/per_vertex_normals.h>
+#include <igl/per_corner_normals.h>
 #include <igl/boundary_facets.h>
 #include <igl/lbs_matrix.h>
 #include <igl/deform_skeleton.h>
@@ -11,11 +14,10 @@
 #include <igl/volume.h>
 #include <igl/cat.h>
 
-// #include <igl/matlab/matlabinterface.h>
-
-
 //internal
+#include <json.hpp>
 #include <read_data_from_json.h>
+
 #include <lumped_mass_matrix.h>
 #include <lbs_matrix.h>
 #include <create_mask_matrix.h>
@@ -26,11 +28,23 @@
 #include <linear_tetmesh_arap_dq.h>
 #include <linear_tetmesh_arap_dq2.h>
 #include <linear_tetmesh_arap_q.h>
-
+#include <linear_tetmesh_neohookean_dq.h>
+#include <linear_tetmesh_neohookean_dq2.h>
+#include <linear_tetmesh_neohookean_q.h>
+#include <linear_tetmesh_stvk_dq.h>
+#include <linear_tetmesh_stvk_dq2.h>
+#include <linear_tetmesh_stvk_q.h>
+#include <linear_tetmesh_corotational_dq.h>
+#include <linear_tetmesh_corotational_dq2.h>
+#include <linear_tetmesh_corotational_q.h>
+#include <simple_psd_fix.h>
 #include <Eigen/Sparse>
 #include <Eigen/Core>
 
 #include <iostream>
+#include <filesystem>
+
+std::string folder_path = "../examples";
 
 //#include "include/read_data_from_json.h"
 const Eigen::Vector3d red(255./255.,0./255.,0./255.);
@@ -43,12 +57,20 @@ void emu_to_lame(const double& E, const double& p, double& lambda, double& mu)
   mu = E/(2.0*(1.0+p));
 }
 
-bool read_json_data(const std::string& filename,
+bool read_json_data(const std::string& filename, 
 Eigen::MatrixXd& V, Eigen::MatrixXi& T, Eigen::MatrixXi& F,
 Eigen::MatrixXd& C, Eigen::VectorXi& PI, Eigen::MatrixXi& BE,
 Eigen::MatrixXd& W, std::vector<Eigen::MatrixXd>& T_list,
-double& dt, int& k, double& YM, double& pr, double& scale)
+double& dt, int& k, double& YM, double& pr, double& scale, std::string& physic_model)
 {
+
+#if defined(WIN32) || defined(_WIN32)
+	#define PATH_SEPARATOR std::string("\\")
+	#else
+#define PATH_SEPARATOR std::string("/")
+#endif
+
+
   using json = nlohmann::json;
 
 	std::ifstream infile(filename);
@@ -59,9 +81,10 @@ double& dt, int& k, double& YM, double& pr, double& scale)
 
 
 	const std::string dir = igl::dirname(filename) + PATH_SEPARATOR;
-  std::string model_name;
+  std::cout<<"dir: "<<dir<<std::endl;
+  // std::string model_name;
 	if(j.count("model"))
-		model_name = j["model"];
+		physic_model = j["model"];
 	else{
 		std::cerr<<"no model specified"<<std::endl;
 		return false;
@@ -69,19 +92,22 @@ double& dt, int& k, double& YM, double& pr, double& scale)
   	if(j.count("mesh_file"))
 	{
 		std::string mesh_filename = j["mesh_file"];
-		Eigen::MatrixXi TF;
-		igl::readMESH(mesh_filename, V, T, F);
+    std::cout<<"mesh_filename: "<<mesh_filename<<std::endl;
+    std::cout<<"dir+mesh_filename: "<<dir+mesh_filename<<std::endl;
+		// Eigen::MatrixXi TF;
+		igl::readMESH(dir+mesh_filename, V, T, F);
+    std::cout<<"dir+mesh_filename: "<<dir+mesh_filename<<std::endl;
 	}
   	if(j.count("handle_file"))
 	{
 		std::string handle_filename = j["handle_file"];
 		Eigen::MatrixXi E, CE, PE;
-		igl::readTGF(handle_filename, C, E, PI, BE, CE, PE);
+		igl::readTGF(dir+handle_filename, C, E, PI, BE, CE, PE);
 	}
   	if(j.count("weight_file"))
 	{
 		std::string weights_filename = j["weight_file"];
-		igl::readDMAT(weights_filename, W);
+		igl::readDMAT(dir+weights_filename, W);
 	}
 
   if(j.count("dt"))
@@ -114,7 +140,16 @@ double& dt, int& k, double& YM, double& pr, double& scale)
   if(j.count("anim_file"))
 	{
 		std::string anim_filename = j["anim_file"];
-    read_pnt_anim(anim_filename, C, Vcenter.transpose(), Vbound, T_list);
+    //assumes the skeleton is either all point handles, or all bone handles. need to fix
+    std::cout<<"BE rows: "<<BE.rows()<<std::endl;
+    if(BE.rows()>0){
+      Eigen::VectorXi P;
+      igl::directed_edge_parents(BE, P);
+      read_bone_anim(dir+anim_filename,C,BE,P,Vcenter.transpose(),Vbound,T_list);
+    }
+    else{
+      read_pnt_anim(dir+anim_filename, C, Vcenter.transpose(), Vbound, T_list);
+    }
 	}
 
 }
@@ -134,34 +169,46 @@ Eigen::MatrixXd matrixize(Eigen::VectorXd V)
 
 int main(int argc, char *argv[])
 {
-  Eigen::MatrixXd SV, V, C, W, VM;
-  Eigen::MatrixXi SF,T,F, E, BE;
+  Eigen::MatrixXd V, C, W, VM;
+  Eigen::MatrixXi T,F, E, BE;
   Eigen::VectorXi PI;
 
   std::vector<Eigen::MatrixXd> T_list;
   double dt, YM, pr, scale;
   int k;
 
-  std::string filename = "../anim_data/sphere/sphere.json";
+  std::string model = argc>1?std::string(argv[1]):"sphere";
+  std::string json_path = folder_path+"/"+model+"/"+model+".json";
 
+  Eigen::MatrixXd SV,TC; Eigen::MatrixXi SF,FTC,FN;
+  {
+    std::string obj_path = folder_path+"/"+model+"/"+model+".obj";
+    Eigen::MatrixXd N; 
+    igl::readOBJ(obj_path,SV,TC,N,SF,FTC,FN);
+    std::cout<<"N row: "<<N.rows()<<", col: "<<N.cols()<<std::endl;
+  }
+  std::string physic_model;
+  std::cout<<"json_path: "<<json_path<<std::endl;
+  read_json_data(json_path,V,T,F,C,PI,BE,W,T_list,dt,k,YM,pr,scale,physic_model);
 
-  read_json_data(filename,V,T,F,C,PI,BE,W,T_list,dt,k,YM,pr,scale);
+  std::cout<<"physic_model: "<<physic_model<<std::endl;
+
+  std::string str = argc>2?std::string(argv[2]):"";
+  bool export_objs = false;
+  if(str=="export")
+    export_objs=true;
 
   double lambda, mu;
   emu_to_lame(YM,pr,lambda,mu);
-
 
   Eigen::MatrixXd params(T.rows(),2);
   params.col(0) = 0.5*lambda*Eigen::VectorXd::Ones(T.rows());
   params.col(1) = mu*Eigen::VectorXd::Ones(T.rows());
 
-
-
   igl::boundary_facets(T, F);
   F = F.rowwise().reverse().eval();
 
 	igl::lbs_matrix(V,W,VM);
-
 
   Eigen::VectorXd vol;
 
@@ -177,9 +224,6 @@ int main(int argc, char *argv[])
 
   Eigen::SparseMatrix<double> A;
   lbs_matrix_column(V,W,A);
-
-
-
 
   Eigen::SparseMatrix<double> phi;
   create_poisson_mask_matrix(V,T,phi);
@@ -201,10 +245,6 @@ int main(int argc, char *argv[])
   Eigen::VectorXd UdCol = Eigen::VectorXd::Zero(nc);
   Eigen::VectorXd UcCol = Eigen::VectorXd::Zero(nc);
 
-  // Engine* engine;
-  // igl::matlab::mlinit(&engine);
-  // igl::matlab::mlsetmatrix(&engine,"Vrc",Vr);
-  // igl::matlab::mleval(&engine,"save('Vrc.mat','Vrc')");
   std::vector<Eigen::MatrixXd> Vn_list(T_list.size());
   int max_iter = 20;
   for(int ai=0; ai<T_list.size(); ai++){
@@ -228,14 +268,22 @@ int main(int argc, char *argv[])
       Eigen::VectorXd G;
       Eigen::SparseMatrix<double> K;
 
-
-      sim::linear_tetmesh_arap_dq(G,V,T,q,dX,vol,params);
-
-      sim::linear_tetmesh_arap_dq2(K,V,T,q,dX,vol,params);
-
-      double e = sim::linear_tetmesh_arap_q(V, T, q, dX, vol, params);
-      //std::cout<<"e: "<<e<<std::endl;
-      
+      if(physic_model=="arap"){
+        sim::linear_tetmesh_arap_dq(G,V,T,q,dX,vol,params);
+        sim::linear_tetmesh_arap_dq2(K,V,T,q,dX,vol,params,[](auto &a) {sim::simple_psd_fix(a, 1e-3);});
+      }
+      else if(physic_model=="neohookean"){
+        sim::linear_tetmesh_neohookean_dq(G,V,T,q,dX,vol,params);
+        sim::linear_tetmesh_neohookean_dq2(K,V,T,q,dX,vol,params,[](auto &a) {sim::simple_psd_fix(a, 1e-3);});
+      }
+      else if(physic_model=="stvk"){
+        sim::linear_tetmesh_stvk_dq(G,V,T,q,dX,vol,params);
+        sim::linear_tetmesh_stvk_dq2(K,V,T,q,dX,vol,params,[](auto &a) {sim::simple_psd_fix(a, 1e-3);});
+      }
+      else if(physic_model=="corotational"){
+        sim::linear_tetmesh_corotational_dq(G,V,T,q,dX,vol,params);
+        sim::linear_tetmesh_corotational_dq2(K,V,T,q,dX,vol,params,[](auto &a) {sim::simple_psd_fix(a, 1e-3);});
+      }
       Eigen::VectorXd tmp_g = M/(dt*dt) * (UrCol+UcCol) - M*(UCol0/(dt*dt)+UdCol0/dt) + G;
       Eigen::SparseMatrix<double> tmp_H = M/(dt*dt) + K;
       tmp_H = 0.5 * (tmp_H+Eigen::SparseMatrix<double>(tmp_H.transpose()));
@@ -259,15 +307,22 @@ int main(int argc, char *argv[])
 
       std::function<double(const Eigen::VectorXd &, const Eigen::VectorXd &)> f;
       f = [&](const Eigen::VectorXd &UrColi, const Eigen::VectorXd &UcColi){
-        return
-        0.5*(UrColi+UcColi-UCol0-dt*UdCol0).transpose()*M/(dt*dt)*(UrColi+UcColi-UCol0-dt*UdCol0)
-        + sim::linear_tetmesh_arap_q(V, T, VCol+UrColi+UcColi, dX, vol, params);
+        double e = 0.5*(UrColi+UcColi-UCol0-dt*UdCol0).transpose()*M/(dt*dt)*(UrColi+UcColi-UCol0-dt*UdCol0);
+        if(physic_model=="arap"){
+          return e + sim::linear_tetmesh_arap_q(V, T, VCol+UrColi+UcColi, dX, vol, params);
+        }
+        else if(physic_model=="neohookean"){
+          return e + sim::linear_tetmesh_neohookean_q(V, T, VCol+UrColi+UcColi, dX, vol, params);
+        }
+        else if(physic_model=="stvk"){
+          return e + sim::linear_tetmesh_stvk_q(V, T, VCol+UrColi+UcColi, dX, vol, params);
+        }
+        else if(physic_model=="corotational"){
+          return e + sim::linear_tetmesh_corotational_q(V, T, VCol+UrColi+UcColi, dX, vol, params);
+        }
       };
-
-
       double alpha = line_search(f,tmp_g,dUc,UrCol,UcCol);
       UcCol = UcCol + alpha * dUc;
-      std::cout<<"i: "<<i<<", alpha: "<<alpha<<std::endl;
     }
     UCol = UrCol + UcCol;
     UdCol = (UCol-UCol0)/dt;
@@ -275,53 +330,71 @@ int main(int argc, char *argv[])
     Eigen::MatrixXd Vn = V + matrixize(UCol);
     Vn_list[ai] = Vn;
 
-    std::string numstr = std::to_string(ai);
-    int strlen = numstr.length();
-
-    std::string seqstr;
-    for(int k=0; k<(4-strlen); k++){
-        seqstr.append("0");
+  }
+  if(export_objs)
+  {
+    std::string output_folder = "../output";
+    if(!std::filesystem::exists(output_folder)){
+      std::filesystem::create_directory(output_folder);
     }
-    seqstr.append(numstr);
+    std::string output_path = output_folder+"/"+model+"_"+physic_model;
+    if(!std::filesystem::exists(output_path)){
+      std::filesystem::create_directory(output_path);
+    }
+    for(int ai=0; ai<Vn_list.size(); ai++)
+    {
+      Eigen::MatrixXd Vn = Vn_list[ai];
+      std::string numstr = std::to_string(ai);
+      int strlen = numstr.length();
 
-    std::string save_path = "../data/sphere/sphere"+seqstr+".obj";
-    igl::writeOBJ(save_path, Vn, F);
+      std::string seqstr;
+      for(int k=0; k<(4-strlen); k++){
+          seqstr.append("0");
+      }
+      seqstr.append(numstr);
 
+      // std::string save_path = folder_path+"/"+model+"/output/"+model+seqstr+".obj";
+      std::string save_path = output_path+"/"+model+"_"+physic_model+"_"+seqstr+".obj";
 
+      // Eigen::MatrixXd SVn = Vn.block(0,0,SV.rows(),3);
+      // Eigen::MatrixXd SN;
+      // //igl::per_vertex_normals(SVn, SF,SN);
+      // igl::per_corner_normals(SVn, SF, 20, SN);
+      // igl::writeOBJ(save_path,SVn,SF,Eigen::MatrixXd(),Eigen::MatrixXi(),TC,FTC);
+
+      igl::writeOBJ(save_path,Vn,F);
+
+    }
   }
 
-// //   Eigen::MatrixXd U = V;
+
 	igl::opengl::glfw::Viewer viewer;
 	viewer.callback_pre_draw = [&](igl::opengl::glfw::Viewer &) -> bool
 	{
 		if(viewer.core().is_animating)
 		{
-			Eigen::MatrixXd T = T_list[frame];
       Eigen::MatrixXd Vn = Vn_list[frame];
-			//U = VM*T;
-			frame++;
-
       viewer.data().set_vertices(Vn);
       viewer.data().compute_normals();
-
-      if(frame == T_list.size()){
+			frame++;
+      if(frame == Vn_list.size()){
         frame = 0;
         //viewer.core().is_animating = false;
       }
 		}
 		return false;
 	};
-viewer.callback_key_down = [&](igl::opengl::glfw::Viewer &, unsigned int key, int mod)
-{
-  if(key==' '){
-    viewer.core().is_animating = !viewer.core().is_animating;
-  }
-  return false;
-};
-	viewer.data().set_mesh(V, F);
-	viewer.core().is_animating = false;
-	viewer.core().animation_max_fps = 24.;
-	viewer.data().show_lines = true;
-	viewer.data().show_overlay_depth = false;
+  viewer.callback_key_down = [&](igl::opengl::glfw::Viewer &, unsigned int key, int mod)
+  {
+    if(key==' '){
+      viewer.core().is_animating = !viewer.core().is_animating;
+    }
+    return false;
+  };
+  viewer.data().set_mesh(V, F);
+  viewer.core().is_animating = true;
+  viewer.core().animation_max_fps = 24.;
+  viewer.data().show_lines = true;
+  viewer.data().show_overlay_depth = false;
   viewer.launch();
 }

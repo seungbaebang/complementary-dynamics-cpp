@@ -1,0 +1,12 @@
+{
+    "mesh_file": "golden_fish.mesh",
+    "handle_file": "golden_fish.tgf",
+    "weight_file": "golden_fish.dmat",
+    "anim_file": "golden_fish_anim.txt",
+    "dt": 0.01,
+    "k": 200,
+    "YM": 7e5,
+    "pr": 0.4,
+    "scale": 1,
+    "model": "arap"
+}

@@ -3,12 +3,13 @@ project(complementary_dynamics)
 
 set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} ${CMAKE_CURRENT_SOURCE_DIR}/cmake)
 #list(APPEND CMAKE_MODULE_PATH ${CMAKE_CURRENT_LIST_DIR}/cmake)
-set(CMAKE_CXX_STANDARD 14)
+set(CMAKE_CXX_STANDARD 17)
 
 set(bartels_ROOT Bartels)
 set(bartels_INCLUDE_DIR ${bartels_ROOT}/include/)
 set(bartels_LIB_DIR ${bartels_ROOT}/build/)
 
+set(CMAKE_BUILD_TYPE Release)
 
 # libigl
 option(LIBIGL_USE_PREBUILT_LIBRARIES "Use prebuilt libraries"       ON)
@@ -34,9 +35,11 @@ file(GLOB SRCFILES src/*.cpp include/*.h)
 
 # target_link_libraries(core igl::core igl::opengl igl::opengl_glfw)
 
-add_executable(linear_demo ${SRCFILES} demo/linear_demo.cpp)
-target_link_libraries(linear_demo igl::core igl::opengl igl::opengl_glfw bartels)
+# add_executable(lbs ${SRCFILES} demo/lbs.cpp)
+# target_link_libraries(lbs igl::core igl::opengl igl::opengl_glfw bartels)
 
-add_executable(nonlinear_demo ${SRCFILES} demo/nonlinear_demo.cpp)
-target_link_libraries(nonlinear_demo igl::core igl::opengl igl::opengl_glfw bartels)
+add_executable(complementary_dynamics ${SRCFILES} demo/complementary_dynamics.cpp)
+target_link_libraries(complementary_dynamics igl::core igl::opengl igl::opengl_glfw bartels)
+
+
 

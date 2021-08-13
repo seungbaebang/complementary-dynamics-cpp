@@ -1,0 +1,12 @@
+{
+    "mesh_file": "elephant.mesh",
+    "handle_file": "elephant.tgf",
+    "weight_file": "elephant.dmat",
+    "anim_file": "elephant_anim2.txt",
+    "dt": 0.01,
+    "k": 200,
+    "YM": 3e5,
+    "pr": 0.4,
+    "scale": 1,
+    "model": "arap"
+}
