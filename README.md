@@ -52,3 +52,12 @@ Here are some more examples:
 frog|fish|elephant
 ----|----|--------
 <img width="400" src="showcases/frog_neohookean.gif"> | <img width="400" src="showcases/fish_arap.gif"> | <img width="400" src="showcases/elephant_arap.gif">
+
+# Bibtex
+
+    @article{Zhang:CompDynamics:2020,
+      title = {Complementary Dynamics},
+      author = {Jiayi Eris Zhang and Seungbae Bang and David I.W. Levin and Alec Jacobson},
+      year = {2020},
+      journal = {ACM Transactions on Graphics},
+    }
