@@ -1,8 +1,4 @@
-#include <Eigen/Core>
-#include <Eigen/Sparse>
-#include <igl/unique.h>
-#include <igl/diag.h>
-#include <igl/massmatrix.h>
+
 #include "create_mask_matrix.h"
 #include <iostream>
 

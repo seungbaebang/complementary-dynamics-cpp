@@ -1,3 +1,6 @@
+#ifndef LBS_MATRIX_H
+#define LBS_MATRIX_H
+
 #include <Eigen/Core>
 #include <Eigen/Sparse>
 #include <igl/lbs_matrix.h>
@@ -13,3 +16,5 @@ void lbs_matrix( const Eigen::MatrixXd & V,
 void lbs_matrix_column( const Eigen::MatrixXd & V,
 		 const Eigen::MatrixXd & W,
 		 Eigen::SparseMatrix<double>& M);
+
+#endif

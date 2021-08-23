@@ -1,7 +1,4 @@
-#include <Eigen/Core>
-#include <Eigen/Sparse>
-#include <igl/lbs_matrix.h>
-
+#include "lbs_matrix.h"
 
 void lbs_matrix(const Eigen::MatrixXd & V,
 		 const Eigen::MatrixXd & W,

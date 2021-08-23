@@ -1,5 +1,6 @@
 #ifndef LINE_SEARCH_H
 #define LINE_SEARCH_H
+
 #include <Eigen/Core>
 #include <functional>
 // Given a function handle that computes an objective value to minimize, a
@@ -26,4 +27,5 @@ double line_search(
     const Eigen::VectorXd & dUc,
     const Eigen::VectorXd & Ur,
     const Eigen::VectorXd & Uc);
+    
 #endif
