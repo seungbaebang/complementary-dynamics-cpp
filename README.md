@@ -28,8 +28,27 @@ Compile static library `libigl` with libigl:
 
 # Run
 
-Run examples by `./complementary_dynamics example_model` (with `example_model` being one example in provided in `examples` folder). For instance, try running following command
+Run examples by `./complementary_dynamics ../examples/example/example.json` (with `example` being one example in provided in `examples` folder). For instance, try running following command
 
-    ./complementary_dynamics sphere
+    ./complementary_dynamics ../examples/sphere/sphere.json
 
 all parameter for physical model is defined in `examples\example.json`. try tweaking parameter and see how it effects the result.
+
+Here are examples running `sphere` in different physical model:
+
+ARAP|Neohookean|StVK|CoRotational
+----|----------|----|------------
+<img width="400" src="showcases/sphere_arap.gif"> | <img width="400" src="showcases/sphere_neohookean.gif"> | <img width="400" src="showcases/sphere_stvk.gif"> | <img width="400" src="showcases/sphere_corotational.gif">
+
+Here are exampels running `sphere` with different Young's modulus:
+
+YM = 5e6|YM = 7e5|YM = 2e5|YM = 5e4
+--------|--------|--------|--------
+<img width="400" src="showcases/sphere_arap_YM_5e6.gif"> | <img width="400" src="showcases/sphere_arap_YM_7e5.gif"> | <img width="400" src="showcases/sphere_arap_YM_2e5.gif"> | <img width="400" src="showcases/sphere_arap_YM_5e4.gif">
+
+
+Here are some more examples:
+
+frog|fish|elephant
+----|----|--------
+<img width="400" src="showcases/frog_neohookean.gif"> | <img width="400" src="showcases/fish_arap.gif"> | <img width="400" src="showcases/elephant_arap.gif">

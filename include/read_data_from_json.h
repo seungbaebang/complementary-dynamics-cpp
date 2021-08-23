@@ -32,12 +32,17 @@
 #include <cassert>
 #include <dirent.h>
 
+#if defined(WIN32) || defined(_WIN32)
+	#define PATH_SEPARATOR std::string("\\")
+	#else
+#define PATH_SEPARATOR std::string("/")
+#endif
 
 bool read_json_data(const std::string& filename, 
 Eigen::MatrixXd& V, Eigen::MatrixXi& T, Eigen::MatrixXi& F,
 Eigen::MatrixXd& C, Eigen::VectorXi& PI, Eigen::MatrixXi& BE,
 Eigen::MatrixXd& W, std::vector<Eigen::MatrixXd>& T_list,
-double& dt, int& k, double& YM, double& pr, double& scale, std::string& physic_model);
+double& dt, double& YM, double& pr, double& scale, std::string& physic_model);
 
 
 #endif

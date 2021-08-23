@@ -16,6 +16,7 @@ option(LIBIGL_USE_PREBUILT_LIBRARIES "Use prebuilt libraries"       ON)
 option(LIBIGL_USE_STATIC_LIBRARY     "Use libigl as static library" ON)
 option(LIBIGL_WITH_OPENGL            "Use OpenGL"         ON)
 option(LIBIGL_WITH_OPENGL_GLFW       "Use GLFW"           ON)
+option(LIBIGL_WITH_PNG               "Use PNG"                      ON)
 # option(LIBIGL_WITH_MATLAB            "Use Matlab"         ON)
 
 find_package(LIBIGL REQUIRED QUIET)
@@ -39,7 +40,7 @@ file(GLOB SRCFILES src/*.cpp include/*.h)
 # target_link_libraries(lbs igl::core igl::opengl igl::opengl_glfw bartels)
 
 add_executable(complementary_dynamics ${SRCFILES} demo/complementary_dynamics.cpp)
-target_link_libraries(complementary_dynamics igl::core igl::opengl igl::opengl_glfw bartels)
+target_link_libraries(complementary_dynamics igl::core igl::opengl igl::opengl_glfw igl::png bartels)
 
 
 

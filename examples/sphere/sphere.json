@@ -4,8 +4,7 @@
     "weight_file": "sphere.dmat",
     "anim_file": "sphere_anim.txt",
     "dt": 0.01,
-    "k": 200,
-    "YM": 5e5,
+    "YM": 5e4,
     "pr": 0.4,
     "scale": 1,
     "model": "arap"

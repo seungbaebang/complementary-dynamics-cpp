@@ -1,11 +1,6 @@
 #include "read_data_from_json.h"
 
 
-#if defined(WIN32) || defined(_WIN32)
-	#define PATH_SEPARATOR std::string("\\")
-	#else
-#define PATH_SEPARATOR std::string("/")
-#endif
 
 
 void convert_vector_mask_to_sparsematrix(int dim, Eigen::VectorXd& V, Eigen::SparseMatrix<double>& SM)
@@ -619,7 +614,7 @@ bool read_json_data(const std::string& filename,
 Eigen::MatrixXd& V, Eigen::MatrixXi& T, Eigen::MatrixXi& F,
 Eigen::MatrixXd& C, Eigen::VectorXi& PI, Eigen::MatrixXi& BE,
 Eigen::MatrixXd& W, std::vector<Eigen::MatrixXd>& T_list,
-double& dt, int& k, double& YM, double& pr, double& scale, std::string& physic_model)
+double& dt, double& YM, double& pr, double& scale, std::string& physic_model)
 {
   using json = nlohmann::json;
 
@@ -631,8 +626,6 @@ double& dt, int& k, double& YM, double& pr, double& scale, std::string& physic_m
 
 
 	const std::string dir = igl::dirname(filename) + PATH_SEPARATOR;
-  std::cout<<"dir: "<<dir<<std::endl;
-  // std::string model_name;
 	if(j.count("model"))
 		physic_model = j["model"];
 	else{
@@ -642,11 +635,7 @@ double& dt, int& k, double& YM, double& pr, double& scale, std::string& physic_m
   	if(j.count("mesh_file"))
 	{
 		std::string mesh_filename = j["mesh_file"];
-    std::cout<<"mesh_filename: "<<mesh_filename<<std::endl;
-    std::cout<<"dir+mesh_filename: "<<dir+mesh_filename<<std::endl;
-		// Eigen::MatrixXi TF;
 		igl::readMESH(dir+mesh_filename, V, T, F);
-    std::cout<<"dir+mesh_filename: "<<dir+mesh_filename<<std::endl;
 	}
   	if(j.count("handle_file"))
 	{
@@ -660,10 +649,8 @@ double& dt, int& k, double& YM, double& pr, double& scale, std::string& physic_m
 		igl::readDMAT(dir+weights_filename, W);
 	}
 
-  if(j.count("dt"))
+    if(j.count("dt"))
 		dt = j["dt"];
-	if(j.count("k"))
-		k = j["k"];
 	if(j.count("YM"))
 		YM = j["YM"];
 	if(j.count("pr"))
@@ -688,19 +675,18 @@ double& dt, int& k, double& YM, double& pr, double& scale, std::string& physic_m
 
 
   if(j.count("anim_file"))
-	{
-		std::string anim_filename = j["anim_file"];
-    //assumes the skeleton is either all point handles, or all bone handles. need to fix
-    std::cout<<"BE rows: "<<BE.rows()<<std::endl;
-    if(BE.rows()>0){
-      Eigen::VectorXi P;
-      igl::directed_edge_parents(BE, P);
-      read_bone_anim(dir+anim_filename,C,BE,P,Vcenter.transpose(),Vbound,T_list);
+    {
+        std::string anim_filename = j["anim_file"];
+        //assumes the skeleton is either all point handles, or all bone handles. need to fix
+        if(BE.rows()>0){
+            Eigen::VectorXi P;
+            igl::directed_edge_parents(BE, P);
+            read_bone_anim(dir+anim_filename,C,BE,P,Vcenter.transpose(),Vbound,T_list);
+        }
+        else{
+            read_pnt_anim(dir+anim_filename, C, Vcenter.transpose(), Vbound, T_list);
+        }
     }
-    else{
-      read_pnt_anim(dir+anim_filename, C, Vcenter.transpose(), Vbound, T_list);
-    }
-	}
 }
 
 

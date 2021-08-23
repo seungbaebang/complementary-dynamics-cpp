@@ -4,7 +4,6 @@
     "weight_file": "frog_weight.dmat",
     "anim_file": "frog_anim.txt",
     "dt": 0.03,
-    "k": 200,
     "YM": 8e5,
     "pr": 0.4,
     "scale": 1,
